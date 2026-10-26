@@ -584,9 +584,6 @@ struct __radix_sort_onesweep_kernel<__sycl_tag, __is_ascending, __radix_bits, __
                                                     std::uint32_t __sub_group_id) const
     {
         // update ranks to reflect sub-group offsets in and across bins
-        // Workaround: forming the previous sub-group's row pointer before indexing by bin avoids an IGC lowering of
-        // __slm_subgroup_hists[(__sub_group_id - 1) * __bin_count + __bin] into a scalar SLM base plus a negative
-        // per-lane offset, which reads zeros on some devices.
         const _LocOffsetT* __prev_sub_group_hist =
             __slm_subgroup_hists + (__sub_group_id == 0 ? 0 : (__sub_group_id - 1) * __bin_count);
         _ONEDPL_PRAGMA_UNROLL

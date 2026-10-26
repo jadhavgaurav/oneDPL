@@ -122,7 +122,8 @@ struct __simple_write_to_id
         using _ConvertedTupleType =
             typename oneapi::dpl::__internal::__get_tuple_type<std::decay_t<decltype(__v)>,
                                                                std::decay_t<decltype(__out_rng[0])>>::__type;
-        __out_rng[__id] = static_cast<_ConvertedTupleType>(__v);
+        using _Repacked = oneapi::dpl::__internal::__repacked_tuple_t<decltype(__out_rng[0])>;
+        _Repacked{__out_rng[__id]} = static_cast<_ConvertedTupleType>(__v);
     }
 };
 

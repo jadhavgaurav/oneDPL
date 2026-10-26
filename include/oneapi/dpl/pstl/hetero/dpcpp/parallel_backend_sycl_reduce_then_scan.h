@@ -116,14 +116,10 @@ struct __simple_write_to_id
     void
     operator()(_OutRng& __out_rng, std::size_t __id, const _ValueType& __v) const
     {
-        // Use of an explicit cast to our internal tuple type is required to resolve conversion issues between our
-        // internal tuple and std::tuple. If the underlying type is not a tuple, then the type will just be passed
-        // through.
-        using _ConvertedTupleType =
-            typename oneapi::dpl::__internal::__get_tuple_type<std::decay_t<decltype(__v)>,
-                                                               std::decay_t<decltype(__out_rng[0])>>::__type;
-        using _Repacked = oneapi::dpl::__internal::__repacked_tuple_t<decltype(__out_rng[0])>;
-        _Repacked{__out_rng[__id]} = static_cast<_ConvertedTupleType>(__v);
+        // __repacked_tuple_t is required to resolve conversion issues when assigning from our internal tuple
+        // to std::tuple. If the underlying type is not a tuple, then the type will just be passed through.
+        using _RepackedTp = oneapi::dpl::__internal::__repacked_tuple_t<decltype(__out_rng[0])>;
+        _RepackedTp{__out_rng[__id]} = __v;
     }
 };
 
@@ -155,32 +151,25 @@ struct __write_to_id_if
     void
     operator()(_OutRng& __out_rng, _SizeType __id, const _ValueType& __v) const
     {
-        // Use of an explicit cast to our internal tuple type is required to resolve conversion issues between our
-        // internal tuple and std::tuple. If the underlying type is not a tuple, then the type will just be passed
-        // through.
-        using _ConvertedTupleType =
-            typename oneapi::dpl::__internal::__get_tuple_type<std::decay_t<decltype(std::get<2>(__v))>,
-                                                               std::decay_t<decltype(__out_rng[0])>>::__type;
+        // __repacked_tuple_t is required to resolve conversion issues when assigning from our internal tuple
+        // to std::tuple. If the underlying type is not a tuple, then the type will just be passed through.
+        using _RepackedTp = oneapi::dpl::__internal::__repacked_tuple_t<decltype(__out_rng[0])>;
+
         if (std::get<1>(__v))
-            __assign(static_cast<_ConvertedTupleType>(std::get<2>(__v)), __out_rng[std::get<0>(__v) - 1 + __offset]);
+            __assign(std::get<2>(__v), _RepackedTp{__out_rng[std::get<0>(__v) - 1 + __offset]});
     }
 
     template <typename _OutRng, typename _SizeType, typename _ValueType, typename _OnOOBReached>
     void
     operator()(_OutRng& __out_rng, _SizeType __id, const _ValueType& __v, _OnOOBReached __on_oob_reached) const
     {
-        // Use of an explicit cast to our internal tuple type is required to resolve conversion issues between our
-        // internal tuple and std::tuple. If the underlying type is not a tuple, then the type will just be passed
-        // through.
-        using _ConvertedTupleType =
-            typename oneapi::dpl::__internal::__get_tuple_type<std::decay_t<decltype(std::get<2>(__v))>,
-                                                               std::decay_t<decltype(__out_rng[0])>>::__type;
+        using _RepackedTp = oneapi::dpl::__internal::__repacked_tuple_t<decltype(__out_rng[0])>;
         if (std::get<1>(__v))
         {
             const std::size_t __out_idx = std::get<0>(__v) - 1 + __offset;
 
             if (__out_idx < __out_size)
-                __assign(static_cast<_ConvertedTupleType>(std::get<2>(__v)), __out_rng[__out_idx]);
+                __assign(std::get<2>(__v), _RepackedTp{__out_rng[__out_idx]});
             if (__out_idx == __out_size)
                 __on_oob_reached(__id, __id);
         }
@@ -325,27 +314,23 @@ struct __write_scan_by_seg
     operator()(_OutRng& __out_rng, std::size_t __id, const _ValueType& __v) const
     {
         using std::get;
-        // Use of an explicit cast to our internal tuple type is required to resolve conversion issues between our
-        // internal tuple and std::tuple. If the underlying type is not a tuple, then the type will just be passed
-        // through.
-        using _ConvertedTupleType =
-            typename oneapi::dpl::__internal::__get_tuple_type<std::decay_t<decltype(get<1>(get<0>(__v)))>,
-                                                               std::decay_t<decltype(__out_rng[0])>>::__type;
+        // __repacked_tuple_t is required to resolve conversion issues when assigning from our internal tuple
+        // to std::tuple. If the underlying type is not a tuple, then the type will just be passed through.
+        using _RepackedTp = oneapi::dpl::__internal::__repacked_tuple_t<decltype(__out_rng[0])>;
         if constexpr (__is_inclusive)
         {
             static_assert(std::is_same_v<_InitType,
                                          oneapi::dpl::unseq_backend::__no_init_value<typename _InitType::__value_type>>,
                           "inclusive_scan_by_segment must not have an initial element");
-            __out_rng[__id] = static_cast<_ConvertedTupleType>(get<1>(get<0>(__v)));
+            _RepackedTp{__out_rng[__id]} = get<1>(get<0>(__v));
         }
         else
         {
             static_assert(
                 std::is_same_v<_InitType, oneapi::dpl::unseq_backend::__init_value<typename _InitType::__value_type>>,
                 "exclusive_scan_by_segment must have an initial element");
-            __out_rng[__id] =
-                get<1>(__v) ? static_cast<_ConvertedTupleType>(__init_value.__value)
-                            : static_cast<_ConvertedTupleType>(__binary_op(__init_value.__value, get<1>(get<0>(__v))));
+            _RepackedTp{__out_rng[__id]} =
+                get<1>(__v) ? __init_value.__value : __binary_op(__init_value.__value, get<1>(get<0>(__v)));
         }
     }
 };
@@ -380,17 +365,14 @@ struct __write_multiple_to_id
     void
     operator()(_OutRng& __out_rng, const _SizeType, const _ValueType& __v, _TempData& __temp_data) const
     {
-        // Use of an explicit cast to our internal tuple type is required to resolve conversion issues between our
-        // internal tuple and std::tuple. If the underlying type is not a tuple, then the type will just be passed
-        // through.
-        using _ConvertedTupleType =
-            typename oneapi::dpl::__internal::__get_tuple_type<std::decay_t<decltype(__temp_data.get_and_destroy(0))>,
-                                                               std::decay_t<decltype(__out_rng[0])>>::__type;
+        // __repacked_tuple_t is required to resolve conversion issues when assigning from our internal tuple
+        // to std::tuple. If the underlying type is not a tuple, then the type will just be passed through.
+        using _RepackedTp = oneapi::dpl::__internal::__repacked_tuple_t<decltype(__out_rng[0])>;
         const __temp_data_array_idx_t __n = std::get<1>(__v);
         for (__temp_data_array_idx_t __i = 0; __i < __n; ++__i)
         {
-            __assign(static_cast<_ConvertedTupleType>(__temp_data.get_and_destroy(__i)),
-                     __out_rng[std::get<0>(__v) - std::get<1>(__v) + __i]);
+            __assign(__temp_data.get_and_destroy(__i),
+                     _RepackedTp{__out_rng[std::get<0>(__v) - std::get<1>(__v) + __i]});
         }
     }
 
@@ -399,12 +381,7 @@ struct __write_multiple_to_id
     operator()(_OutRng& __out_rng, _SizeType __id, const _ValueType& __v, _TempData& __temp_data,
                _OnOOBReached __on_oob_reached) const
     {
-        // Use of an explicit cast to our internal tuple type is required to resolve conversion issues between our
-        // internal tuple and std::tuple. If the underlying type is not a tuple, then the type will just be passed
-        // through.
-        using _ConvertedTupleType =
-            typename oneapi::dpl::__internal::__get_tuple_type<std::decay_t<decltype(__temp_data.get_and_destroy(0))>,
-                                                               std::decay_t<decltype(__out_rng[0])>>::__type;
+        using _RepackedTp = oneapi::dpl::__internal::__repacked_tuple_t<decltype(__out_rng[0])>;
         const __temp_data_array_idx_t __n = std::get<1>(__v);
         for (__temp_data_array_idx_t __i = 0; __i < __n; ++__i)
         {
@@ -417,7 +394,7 @@ struct __write_multiple_to_id
 
             const std::size_t __out_idx = std::get<0>(__v) - std::get<1>(__v) + __i;
             if (__out_idx < __out_size)
-                __assign(static_cast<_ConvertedTupleType>(std::forward<decltype(__val)>(__val)), __out_rng[__out_idx]);
+                __assign(std::forward<decltype(__val)>(__val), _RepackedTp{__out_rng[__out_idx]});
 
             // Report the source id of the current diagonal together with the local element offset within the
             // temporary data. This is enough to recover the source index pair later (by re-running the serial

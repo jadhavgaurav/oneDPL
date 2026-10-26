@@ -673,27 +673,6 @@ swap(oneapi::dpl::__internal::tuple<_T...>&& __x, oneapi::dpl::__internal::tuple
     swap(__x.next, __y.next);
 }
 
-// Get corresponding std::tuple for our internal tuple(i.e. access tuple_type member
-// which is std::tuple<Ts...> for internal::tuple<Ts...>).
-// Do nothing for other types or if both operands are internal tuples.
-template <class _T, class>
-struct __get_tuple_type
-{
-    using __type = _T;
-};
-
-// template <class... _Ts, class... _Us>
-// struct __get_tuple_type<oneapi::dpl::__internal::tuple<_Ts...>, oneapi::dpl::__internal::tuple<_Us...>>
-// {
-    // using __type = typename oneapi::dpl::__internal::tuple<_Ts...>;
-// };
-
-// template <class... _Ts, class _Other>
-// struct __get_tuple_type<oneapi::dpl::__internal::tuple<_Ts...>, _Other>
-// {
-    // using __type = typename oneapi::dpl::__internal::tuple<_Ts...>::tuple_type;
-// };
-
 // Converts std::tuple to the internal tuple
 template <typename T>
 struct __repacked_tuple

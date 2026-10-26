@@ -206,16 +206,14 @@ struct __write_partitioned
                 || (__start_idx - __mask_prefix) + __max_write_offset > __out2_size);
     }
 
-    template <typename _ValueType, typename _Range>
-    static constexpr auto
-    __tuple_type_cast(_ValueType&& __value, _Range&&)
+    template <typename _OutRefType>
+    static oneapi::dpl::__internal::__repacked_tuple_t<_OutRefType>
+    __repacked_tuple_type(_OutRefType&& __maybe_tuple)
     {
-        // An explicit cast to our internal tuple type is required to resolve conversion issues between an
-        // internal tuple and a std::tuple. If the underlying type is not a tuple, it just passes through.
-        // _Range is only used for type deduction; no runtime access occurs.
-        using _ConvertedType = typename oneapi::dpl::__internal::__get_tuple_type<
-            std::decay_t<_ValueType>, std::decay_t<decltype(std::declval<_Range>()[0])>>::__type;
-        return static_cast<_ConvertedType>(std::forward<_ValueType>(__value));
+        // __repacked_tuple_t is required to resolve conversion issues when assigning from our internal tuple
+        // to std::tuple. If the underlying type is not a tuple, then the type will just be passed through.
+        using _RepackedTp = oneapi::dpl::__internal::__repacked_tuple_t<_OutRefType>;
+        return _RepackedTp{std::forward<_OutRefType>(__maybe_tuple)};
     }
 
     template <typename _OutRng, typename _SizeType, typename _ValueType>
@@ -225,9 +223,9 @@ struct __write_partitioned
         const auto& [__mask_prefix, __mask, __value] = __v;
         auto& [__out1_rng, __out2_rng] = __out_rng; // unpack the tuple of outputs
         if (__mask)
-            __out1_rng[__mask_prefix - 1] = __tuple_type_cast(__value, __out1_rng);
+            __repacked_tuple_type(__out1_rng[__mask_prefix - 1]) = __value;
         else
-            __out2_rng[__id - __mask_prefix] = __tuple_type_cast(__value, __out2_rng);
+            __repacked_tuple_type(__out2_rng[__id - __mask_prefix]) = __value;
     }
 
     template <typename _OutRng, typename _SizeType, typename _ValueType, typename _OnOOBReached>
@@ -249,9 +247,9 @@ struct __write_partitioned
             if (__target_idx_in_bound)
             {
                 if (__mask)
-                    __out1_rng[__out1_idx] = __tuple_type_cast(__value, __out1_rng);
+                    __repacked_tuple_type(__out1_rng[__out1_idx]) = __value;
                 else
-                    __out2_rng[__out2_idx] = __tuple_type_cast(__value, __out2_rng);
+                    __repacked_tuple_type(__out2_rng[__out2_idx]) = __value;
             }
             // If out-of-bound conditions detected, report stop positions in the input and the 1st output
             if (__oob_reached)
